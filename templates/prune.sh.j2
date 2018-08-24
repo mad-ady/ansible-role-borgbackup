@@ -1,3 +1,5 @@
+#jinja2:lstrip_blocks: True
+
 #!/bin/bash
 
 # This script is intended to run on a trusted management station to purge borg repo's in
@@ -5,15 +7,22 @@
 # Don't put it on the backup server, it contains all borg secrets!
 
 {% for h in groups['all'] %}
-  {% if hostvars[h].borgbackup_required | default(True) %}
-      # Host: {{ h }}
+  {% if hostvars[h].borgbackup_required | default(false) %}
+    {% if hostvars[h].borgbackup_passphrase is defined %}
+
+    # Host: {{ h }}
     {% for b in hostvars[h].borgbackup_servers %}
       {% if hostvars[h].borgbackup_managementstation is defined and inventory_hostname == hostvars[h].borgbackup_managementstation %}
       export BORG_PASSPHRASE={{ hostvars[h].borgbackup_passphrase }}
+      {% if inventory_hostname == 'metatron' %}
+      REPOSITORY={{ b.user }}@metatron:{{ b.home }}{{ b.pool }}/{{ h }}
+      {% else %}
       REPOSITORY={{ b.user }}@{{ b.fqdn }}:{{ b.home }}{{ b.pool }}/{{ h }}
-      /usr/local/bin/borg prune -v $REPOSITORY {{ b.options }} -H {{ hostvars[h].borgbackup_retention.hourly }} -d {{ hostvars[h].borgbackup_retention.daily }} -w {{ hostvars[h].borgbackup_retention.weekly }} -m {{ hostvars[h].borgbackup_retention.monthly }} -y {{ hostvars[h].borgbackup_retention.yearly }}
+      {% endif %}
+      /usr/local/bin/borg prune -v $REPOSITORY {{ b.options }} -H {{ hostvars[h].borgbackup_retention.hourly }} -d {{ hostvars[h].borgbackup_retention.daily }} -w {{ hostvars[h].borgbackup_retention.weekly }} -m {{ hostvars[h].borgbackup_retention.monthly }}{% if hostvars[h].borgbackup_retention.yearly > 0 %} -y {{ hostvars[h].borgbackup_retention.yearly }}{% endif %}
 
       {% endif %}
     {% endfor %}
+    {% endif %}{# end passphrase #}
   {% endif %}
 {% endfor %}
