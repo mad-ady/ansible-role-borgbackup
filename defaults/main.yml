@@ -21,7 +21,6 @@ borgbackup_include:
   - "/home"
   - "/root"
   - "/var/www"
-  - "/var/log"
 
 borgbackup_exclude: []
 
