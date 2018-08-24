@@ -37,8 +37,8 @@
   authorized_key:
     user: "{{ item.user }}"
     key: "{{ sshkey.stdout }}"
-    key_options: 'command="cd {{ item.home }}{{ item.pool }}/{{ inventory_hostname }};borg serve {% if borgbackup_appendonly %}--append-only {% endif %}--restrict-to-path {{ item.home }}/{{ item.pool }}/{{ inventory_hostname }}",no-port-forwarding,no-X11-forwarding,no-pty,no-agent-forwarding,no-user-rc'
-  delegate_to: "{{ item.fqdn }}"
+    key_options: 'command="cd {{ item.home }}{{ item.pool }}/{{ inventory_hostname }};borg serve {% if borgbackup_appendonly %}--append-only {% endif %}--restrict-to-path {{ item.home }}{{ item.pool }}/{{ inventory_hostname }}",no-port-forwarding,no-X11-forwarding,no-pty,no-agent-forwarding,no-user-rc'
+  delegate_to: "{{ item.shortname }}"
   when: item.type == 'normal'
   with_items: "{{ borgbackup_servers }}"
 
@@ -71,19 +71,17 @@
   when: item.type in ['rsync.net','hetzner'] and authkeys.changed
   with_items: "{{ borgbackup_servers }}"
 
-- name: client | remove tmp authorized_keys files
-  file:
-    path: /tmp/authkeys-{{ item.type }}-{{ item.fqdn }}-authkeys
-    state: absent
-  delegate_to: localhost
-  become: no
-  with_items: "{{ borgbackup_servers }}"
-  when: authkeys.changed
-  changed_when: false
-
-- name: client | check for mysql
+- name: client | check for automysql
   stat: path=/var/lib/automysqlbackup
   register: automysql
+  tags:
+    - script
+  
+- name: client | check for mysql
+  stat: path=/var/lib/mysql
+  register: mysql_installed
+  tags:
+    - script
 
 - name: client | put wrapper script
   template:
@@ -91,23 +89,9 @@
     dest: "/usr/local/bin/borg-backup"
     owner: "{{ borgbackup_owner }}"
     group: "{{ borgbackup_group }}"
-    mode: "0744"
-
-- name: client | create backup-directory on backup server
-  shell: /usr/local/bin/borg-backup init
-  become_user: "{{ borgbackup_client_user }}"
-  register: backup_init
-  changed_when: "'Remember your passphrase' in backup_init.stderr"
-
-- name: client | create backup cronjob
-  cron:
-    cron_file: "borg-backup"
-    user: "{{ borgbackup_client_user }}"
-    name: "borg-backup"
-    minute: "{{ borgbackup_cron_minute }}"
-    hour: "{{ borgbackup_cron_hour }}"
-    day: "{{ borgbackup_cron_day }}"
-    job: "/usr/local/bin/borg-backup backup"
+    mode: "0550"
+  tags:
+    - script
 
 - name: client | disable automysqlbackup cronjob, it's in our pre-backup-tasks 
   lineinfile:
@@ -118,3 +102,74 @@
     backrefs: "yes"
     create: "no"
   when: automysql.stat.isdir is defined and automysql.stat.isdir == True
+
+- name: client | create backup-directory if appendonly is set
+  file:
+    path: "{{ item.home }}{{ item.pool }}/{{ inventory_hostname }}"
+    state: directory
+    owner: "{{ item.user }}"
+    group: "{{ item.user }}"
+  when: borgbackup_appendonly == True and item.type == 'normal'
+  delegate_to: "{{ item.shortname }}"
+  with_items: "{{ borgbackup_servers }}"
+
+- name: client | check if we already have keys (i.e. a repo)
+  stat: 
+    path: "~{{ borgbackup_client_user }}/.config/borg/keys"
+  register: havekeys
+  with_items: "{{ borgbackup_servers }}"
+
+- name: client | init the repo
+  shell: /usr/local/bin/borg-backup init
+  become_user: "{{ borgbackup_client_user }}"
+  register: backup_init
+  changed_when: "'Remember your passphrase' in backup_init.stderr"
+  when: item.stat.exists == False
+  with_items: "{{ havekeys.results }}"
+
+- name: client | Wait until the repo is initiated
+  wait_for:
+    path: "{{ item.home }}{{ item.pool }}/{{ inventory_hostname }}/README"
+  delegate_to: "{{ item.shortname }}"
+  with_items: "{{ borgbackup_servers }}"
+  
+- name: client | copy borg keys to ansible host
+  fetch:
+    src: "~{{ borgbackup_client_user }}/.config/borg/keys/{{ item.fqdn | replace('.', '_') }}_{{ item.home | replace('/', '_') }}{{ item.pool }}_{{ inventory_hostname }}"
+    dest: /tmp/ansible/borgkeys/
+    flat: yes
+  with_items: "{{ borgbackup_servers }}"
+  tags:
+    - copykeys
+
+- name: client | copy borg keys to management server
+  copy:
+    src: /tmp/ansible/borgkeys/
+    dest: "~{{ borgbackup_management_user }}/.config/borg/keys/"
+    owner: "{{ borgbackup_management_user }}"
+    mode: 0600
+    backup: yes
+  delegate_to: "{{ item.shortname }}"
+  when: item.type == 'normal'
+  with_items: "{{ borgbackup_servers }}"
+  tags:
+    - copykeys
+
+- name: client | delete local copy of keys
+  become: no
+  file:
+    path: /tmp/ansible/borgkeys
+    state: absent
+  delegate_to: localhost
+
+- name: client | create backup cronjob
+  cron:
+    cron_file: "borg-backup"
+    user: "{{ borgbackup_client_user }}"
+    name: "borg-backup"
+    minute: "{{ borgbackup_cron_minute }}"
+    hour: "{{ borgbackup_cron_hour }}"
+    day: "{{ borgbackup_cron_day }}"
+    job: "/usr/local/bin/borg-backup backup > /dev/null 2>&1"
+  tags:
+    - cron
