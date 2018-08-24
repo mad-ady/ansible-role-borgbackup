@@ -3,6 +3,7 @@
 - name: Configure Borg backup
   hosts: all
   become: True
+  gather_facts: false
 
   roles:
     - role: borgbackup
