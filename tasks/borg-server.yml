@@ -5,7 +5,7 @@
     shell: "/bin/bash"
     home: "{{ item.home }}"
     createhome: "yes"
-  delegate_to: "{{ item.fqdn }}"
+  delegate_to: "{{ item.shortname }}"
   with_items: "{{ borgbackup_servers }}"
   when: item.type == 'normal'
 
@@ -16,5 +16,5 @@
     owner: "{{ item.user }}"
     group: "{{ item.user }}"
     mode: "0770"
-  delegate_to: "{{ item.fqdn }}"
+  delegate_to: "{{ item.shortname }}"
   with_items: "{{ borgbackup_servers }}"
