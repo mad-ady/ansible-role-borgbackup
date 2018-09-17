@@ -2,6 +2,8 @@
 - include_tasks: install.yml
   when: >
     borgbackup_required == True 
+  tags:
+    - install
 
 # or
 # inventory_hostname in groups.borgbackup_servers

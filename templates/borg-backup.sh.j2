@@ -79,6 +79,12 @@ BORGEXIT=()
     mysqldump -A | /usr/local/bin/borg create --progress --compression {{ borgbackup_compression }} --stats {{ b.options }} $REPOSITORY::mysqldump-$date - 
     BORGEXIT+=($?)
 {% endif %}
+{% if borgbackup_do_plex is defined %}
+
+    sqlite3 "/var/lib/plexmediaserver/Library/Application Support/Plex Media Server/Plug-in Support/Databases/com.plexapp.plugins.library.db" .dump  | /usr/local/bin/borg create --progress --compression {{ borgbackup_compression }} --stats {{ b.options }} $REPOSITORY::plex-dump-$date - 
+    BORGEXIT+=($?)
+
+{% endif %}
 
     # iterate over exit codes
     EXITCODE=''

@@ -2,9 +2,13 @@
 - name: install borg backup
   get_url:
     dest: "/usr/local/bin/borg"
-    checksum: "{{ borgbackup_checksum }}"
     owner: "{{ borgbackup_owner }}"
     group: "{{ borgbackup_group }}"
     mode: "0755"
     url: "{{ borgbackup_download_url }}"
-  tags: borginstall
+    force: yes
+
+- name: install borg support packages
+  apt: 
+    pkg: '{{ item }}'
+  with_items: '{{ borgbackup_packages }}'
