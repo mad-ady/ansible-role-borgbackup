@@ -107,7 +107,7 @@
     minute: "{{ borgbackup_cron_minute }}"
     hour: "{{ borgbackup_cron_hour }}"
     day: "{{ borgbackup_cron_day }}"
-    job: "/usr/local/bin/borg-backup backup"
+    job: "/usr/local/bin/borg-backup backup >> /var/log/borg.log 2>&1"
 
 - name: client | disable automysqlbackup cronjob, it's in our pre-backup-tasks 
   lineinfile:
