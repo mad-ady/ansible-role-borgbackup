@@ -44,3 +44,5 @@ borgbackup_management_ssh_pubkey: ''
 borgbackup_owner: root
 borgbackup_group: root
 borgbackup_shell: "/bin/bash"
+
+borgbackup_prune_script: /usr/local/sbin/borg-prune.sh
