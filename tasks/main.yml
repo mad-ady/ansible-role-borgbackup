@@ -1,7 +1,7 @@
 ---
 - include_tasks: install.yml
   when: >
-    borgbackup_required == True 
+    borgbackup_required == True
   tags:
     - install
 
@@ -12,14 +12,10 @@
   when: inventory_hostname in groups.borgbackup_servers
 
 - import_tasks: borg-client.yml
-  when: >
-    borgbackup_required == True and
-    inventory_hostname not in groups.borgbackup_servers
+  when: inventory_hostname not in groups.borgbackup_servers
 
 - import_tasks: management.yml
-  when: >
-    inventory_hostname in groups.borgbackup_management
+  when: inventory_hostname in groups.borgbackup_management
   tags:
     - mgmt
-    
   # and inventory_hostname not in groups.borgbackup_servers
