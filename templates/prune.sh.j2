@@ -7,18 +7,24 @@
 # Don't put it on the backup server, it contains all borg secrets!
 
 {% for h in groups['all'] %}
-  {% if hostvars[h].borgbackup_required | default(false) %}
-    {% if hostvars[h].borgbackup_passphrase is defined %}
+  {% if hostvars[h].borgbackup_passphrase is defined %}
 
-      # Host: {{ h }}
-    {% for b in hostvars[h].borgbackup_servers %}
-{% if hostvars[h].borgbackup_managementstation is defined and inventory_hostname == hostvars[h].borgbackup_managementstation %}
-      export BORG_PASSPHRASE={{ hostvars[h].borgbackup_passphrase }}
-      REPOSITORY={{ b.user }}@{{ b.shortname }}:{{ b.home }}{{ b.pool }}/{{ h }}
-      /usr/local/bin/borg prune -v $REPOSITORY {{ b.options }} -H {{ hostvars[h].borgbackup_retention.hourly }} -d {{ hostvars[h].borgbackup_retention.daily }} -w {{ hostvars[h].borgbackup_retention.weekly }} -m {{ hostvars[h].borgbackup_retention.monthly }}{% if hostvars[h].borgbackup_retention.yearly > 0 %} -y {{ hostvars[h].borgbackup_retention.yearly }}{% endif %}
-
+# Host: {{ h }}
+  {% for b in hostvars[h].borgbackup_servers %}
+    {% if hostvars[h].borgbackup_managementstation is defined and inventory_hostname == hostvars[h].borgbackup_managementstation %}
+export BORG_PASSPHRASE={{ hostvars[h].borgbackup_passphrase }}
+{% if b.port is defined %}
+{# ssh with ports needs ssh:// #}
+{# https://github.com/borgbackup/borg/issues/851 #}
+export REPOSITORY=ssh://{{ b.user }}@{{ b.fqdn }}:{{ b.port }}/{{ b.home }}{{ b.pool }}/{{ h }}
+{% else %}
+export REPOSITORY={{ b.user }}@{{ b.fqdn }}:{{ b.home }}{{ b.pool }}/{{ h }}
 {% endif %}
-    {% endfor %}
-    {% endif %}{# end passphrase #}
-  {% endif %}
+/usr/local/bin/borg prune -v $REPOSITORY {{ b.options }} -H {{ hostvars[h].borgbackup_retention.hourly }} -d {{ hostvars[h].borgbackup_retention.daily }} -w {{ hostvars[h].borgbackup_retention.weekly }} -m {{ hostvars[h].borgbackup_retention.monthly }}{% if hostvars[h].borgbackup_retention.yearly > 0 %} -y {{ hostvars[h].borgbackup_retention.yearly }}{% endif %} 
+unset BORG_PASSPHRASE
+unset REPOSITORY
+
+    {% endif %}
+  {% endfor %}
+  {% endif %}{# end passphrase #}
 {% endfor %}
