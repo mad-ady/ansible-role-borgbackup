@@ -16,7 +16,7 @@ export BORG_PASSPHRASE={{ hostvars[h].borgbackup_passphrase }}
 {% if b.port is defined %}
 {# ssh with ports needs ssh:// #}
 {# https://github.com/borgbackup/borg/issues/851 #}
-export REPOSITORY=ssh://{{ b.user }}@{{ b.fqdn }}:{{ b.port }}/{{ b.home }}{{ b.pool }}/{{ h }}
+export REPOSITORY=ssh://{{ b.user }}@{{ b.fqdn }}:{{ b.port }}{{ b.home }}{{ b.pool }}/{{ h }}
 {% else %}
 export REPOSITORY={{ b.user }}@{{ b.fqdn }}:{{ b.home }}{{ b.pool }}/{{ h }}
 {% endif %}
