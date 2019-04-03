@@ -1,26 +1,30 @@
 #jinja2:lstrip_blocks: True
-
 #!/bin/bash
 
 # This script is intended to run on a trusted management station to purge borg repo's in
 # append-only mode.
 # Don't put it on the backup server, it contains all borg secrets!
 
-{% for h in groups['all'] %}
+# override “Warning: The repository at location … was previously located at …”
+export BORG_RELOCATED_REPO_ACCESS_IS_OK=yes
+
+{% for h in groups['all'] | sort %}
   {% if hostvars[h].borgbackup_passphrase is defined %}
 
 # Host: {{ h }}
   {% for b in hostvars[h].borgbackup_servers %}
     {% if hostvars[h].borgbackup_managementstation is defined and inventory_hostname == hostvars[h].borgbackup_managementstation %}
 export BORG_PASSPHRASE={{ hostvars[h].borgbackup_passphrase }}
-{% if b.port is defined %}
-{# ssh with ports needs ssh:// #}
-{# https://github.com/borgbackup/borg/issues/851 #}
+      {% if borgbackup_management_repository_url %}
+export REPOSITORY={{ borgbackup_management_repository_url }}{{ b.home }}{{ b.pool }}/{{ h }}
+      {% elif b.port is defined %}
+      {# ssh with ports needs ssh:// #}
+      {# https://github.com/borgbackup/borg/issues/851 #}
 export REPOSITORY=ssh://{{ b.user }}@{{ b.fqdn }}:{{ b.port }}{{ b.home }}{{ b.pool }}/{{ h }}
-{% else %}
+      {% else %}
 export REPOSITORY={{ b.user }}@{{ b.fqdn }}:{{ b.home }}{{ b.pool }}/{{ h }}
-{% endif %}
-/usr/local/bin/borg prune -v $REPOSITORY {{ b.options }} -H {{ hostvars[h].borgbackup_retention.hourly }} -d {{ hostvars[h].borgbackup_retention.daily }} -w {{ hostvars[h].borgbackup_retention.weekly }} -m {{ hostvars[h].borgbackup_retention.monthly }}{% if hostvars[h].borgbackup_retention.yearly > 0 %} -y {{ hostvars[h].borgbackup_retention.yearly }}{% endif %} 
+      {% endif %}
+/usr/local/bin/borg prune --info {{ b.options }} -H {{ hostvars[h].borgbackup_retention.hourly }} -d {{ hostvars[h].borgbackup_retention.daily }} -w {{ hostvars[h].borgbackup_retention.weekly }} -m {{ hostvars[h].borgbackup_retention.monthly }}{% if hostvars[h].borgbackup_retention.yearly > 0 %} -y {{ hostvars[h].borgbackup_retention.yearly }}{% endif %} $REPOSITORY
 unset BORG_PASSPHRASE
 unset REPOSITORY
 
