@@ -40,6 +40,7 @@ borgbackup_appendonly: False
 borgbackup_management_station: ''
 borgbackup_management_user: ''
 borgbackup_management_ssh_pubkey: ''
+borgbackup_management_repository_url: False
 
 borgbackup_owner: root
 borgbackup_group: root
