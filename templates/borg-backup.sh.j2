@@ -108,9 +108,11 @@ BORGEXIT=()
 
 {% endfor %}
 
-    # Running some commands post-backup
 {% for postcommand in borgbackup_post_commands %}
-    {{ postcommand }}
+    # Running some commands post-backup
+    if [ $EXITCODE -eq 0 ]; then 
+        {{ postcommand }}
+    fi 
 {% endfor %}
 
 fi
