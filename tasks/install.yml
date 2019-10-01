@@ -7,8 +7,20 @@
     mode: "0755"
     url: "{{ borgbackup_download_url }}"
     force: yes
+  when: ansible_os_family == "Debian"
 
 - name: install borg support packages
   apt: 
-    pkg: '{{ item }}'
-  with_items: '{{ borgbackup_packages }}'
+    name: '{{ borgbackup_packages }}'
+    force_apt_get: yes
+  when: ansible_os_family is defined and ansible_os_family == "Debian"
+
+- name: install borg
+  apk:
+    name: 'borgbackup'
+  when: ansible_distribution == "Alpine"
+
+- name: install borg support packages
+  apk:
+    name: '{{ borgbackup_packages }}'
+  when: ansible_distribution == "Alpine"
