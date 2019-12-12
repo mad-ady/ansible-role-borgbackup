@@ -17,16 +17,6 @@
 #   when: item.type == 'normal'
 #   with_items: "{{ borgbackup_servers }}"
 
-<<<<<<< HEAD
-# rsync.net has no python, so we can only use raw to manage ssh keys - workaround with local tmp file
-- name: management | get rsync.net authorized_keys file
-  raw: scp {{ item.user }}@{{ item.fqdn }}:.ssh/authorized_keys /tmp/rsync.net-{{ item.fqdn }}-authkeys
-  delegate_to: localhost
-  become: no
-  when: item.type == 'rsync.net'
-  with_items: "{{ borgbackup_servers }}"
-  changed_when: false
-=======
 # # rsync.net has no python, so we can only use raw to manage ssh keys - workaround with local tmp file
 # - name: management | get rsync.net authorized_keys file
 #   raw: scp {{ item.user }}@{{ item.fqdn }}:.ssh/authorized_keys /tmp/rsync.net-{{ item.fqdn }}-authkeys
@@ -47,7 +37,6 @@
 #   when: item.type == 'rsync.net'
 #   with_items: "{{ borgbackup_servers }}"
 #   register: authkeys
->>>>>>> fredrik
 
 # - name: management | upload local authorized_keys to rsync.net
 #   raw: scp /tmp/rsync.net-{{ item.fqdn }}-authkeys {{ item.user }}@{{ item.fqdn }}:.ssh/authorized_keys
