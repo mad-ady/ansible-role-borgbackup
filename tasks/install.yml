@@ -2,9 +2,25 @@
 - name: install borg backup
   get_url:
     dest: "/usr/local/bin/borg"
-    checksum: "{{ borgbackup_checksum }}"
     owner: "{{ borgbackup_owner }}"
     group: "{{ borgbackup_group }}"
     mode: "0755"
     url: "{{ borgbackup_download_url }}"
-  tags: borginstall
+    force: yes
+  when: ansible_os_family == "Debian"
+
+- name: install borg support packages
+  apt: 
+    name: '{{ borgbackup_packages }}'
+    force_apt_get: yes
+  when: ansible_os_family is defined and ansible_os_family == "Debian"
+
+- name: install borg
+  apk:
+    name: 'borgbackup'
+  when: ansible_distribution == "Alpine"
+
+- name: install borg support packages
+  apk:
+    name: '{{ borgbackup_packages }}'
+  when: ansible_distribution == "Alpine"
