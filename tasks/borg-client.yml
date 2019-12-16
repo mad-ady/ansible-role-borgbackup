@@ -71,12 +71,6 @@
   when: item.type in ['rsync.net','hetzner'] and authkeys.changed
   with_items: "{{ borgbackup_servers }}"
 
-- name: client | check for automysql
-  stat: path=/var/lib/automysqlbackup
-  register: automysql
-  tags:
-    - script
-  
 - name: client | check for mysql
   stat: path=/var/lib/mysql
   register: mysql_installed
@@ -92,16 +86,6 @@
     mode: "0550"
   tags:
     - script
-
-- name: client | disable automysqlbackup cronjob, it's in our pre-backup-tasks 
-  lineinfile:
-    dest: "/etc/cron.daily/automysqlbackup"
-    regexp: "^/usr/sbin/automysqlbackup$"
-    line: "#/usr/sbin/automysqlbackup"
-    state: "present"
-    backrefs: "yes"
-    create: "no"
-  when: automysql.stat.isdir is defined and automysql.stat.isdir == True
 
 - name: client | create backup-directory if appendonly is set
   file:

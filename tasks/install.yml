@@ -1,11 +1,16 @@
 ---
+- name: Get latest release of a borgbackup repository
+  uri:
+    url: https://api.github.com/repos/borgbackup/borg/releases/latest
+  register: borg_latest
+
 - name: install borg backup
   get_url:
     dest: "/usr/local/bin/borg"
     owner: "{{ borgbackup_owner }}"
     group: "{{ borgbackup_group }}"
     mode: "0755"
-    url: "{{ borgbackup_download_url }}"
+    url: 'https://github.com/borgbackup/borg/releases/download/{{ borg_latest.json.tag_name }}/borg-linux64'
     force: yes
   when: ansible_os_family == "Debian"
 

@@ -1,7 +1,5 @@
 ---
-- include_tasks: install.yml
-  when: >
-    borgbackup_required == True
+- import_tasks: install.yml
   tags:
     - install
 

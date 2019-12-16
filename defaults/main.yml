@@ -7,9 +7,6 @@ borgbackup_packages:
 borgbackup_client_user: root
 borgbackup_ssh_key: "~{{ borgbackup_client_user }}/.ssh/id_borg_rsa"
 
-borgbackup_version: "1.1.10"
-borgbackup_download_url: "https://github.com/borgbackup/borg/releases/download/{{ borgbackup_version }}/borg-linux64"
-
 borgbackup_compression: "auto,zlib,6"
 borgbackup_encryption_mode: keyfile
 
