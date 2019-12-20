@@ -13,14 +13,17 @@ fi
 
 . ~{{ borgbackup_client_user }}/.borg.passphrase
 
+# override location since we specify port now
+export BORG_RELOCATED_REPO_ACCESS_IS_OK=yes
+
 # Small helper commands, like listing backups, will help us in the future :)
 
 if [ "$1" = "info" ]
   then
     if [ -z "$2" ]; then printf "run $0 with list and use the backup-tag to request information\n"; exit 1; fi
 {% for b in borgbackup_servers %}
-    REPOSITORY={% if b.type == 'hetzner' %}ssh://{% endif %}{{ b.user }}@{{ b.fqdn }}:{% if b.type == 'hetzner' %}23/./{% endif %}{{ b.home }}{{ b.pool }}/{{ inventory_hostname }}
-    /usr/local/bin/borg info {{ b.options }} $REPOSITORY::$2
+    export BORG_REPO="ssh://{{ b.user }}@{{ b.fqdn }}:{{ b.port | default('22') }}{{ b.home }}/{{ b.pool }}/{{ inventory_hostname }}"
+    /usr/local/bin/borg info {{ b.options }} $BORG_REPO::$2
 {% endfor %}
     exit 0
 fi
@@ -31,8 +34,8 @@ if [ "$1" = "mount" ]
     if [ -z "$3" ]; then printf "Select the backup to mount\n"; exit 1; fi
     if [ -z "$4" ]; then printf "Select the path to mount the backup on\n"; exit 1; fi
 {% for b in borgbackup_servers %}
-    REPOSITORY={% if b.type == 'hetzner' %}ssh://{% endif %}{{ b.user }}@{{ b.fqdn }}:{% if b.type == 'hetzner' %}23/./{% endif %}{{ b.home }}{{ b.pool }}/{{ inventory_hostname }}
-    /usr/local/bin/borg mount {{ b.options }} $REPOSITORY::$3 $4
+    export BORG_REPO="ssh://{{ b.user }}@{{ b.fqdn }}:{{ b.port | default('22') }}{{ b.home }}/{{ b.pool }}/{{ inventory_hostname }}"
+    /usr/local/bin/borg mount {{ b.options }} $BORG_REPO::$3 $4
     if [ "$?" = "0" ]; then printf "Backup mounted on $4, do not forget to unmount!\n"; fi
     exit 0
 {% endfor %}
@@ -41,9 +44,9 @@ fi
 if [ "$1" = "list" ]
   then
 {% for b in borgbackup_servers %}
-    REPOSITORY={% if b.type == 'hetzner' %}ssh://{% endif %}{{ b.user }}@{{ b.fqdn }}:{% if b.type == 'hetzner' %}23/./{% endif %}{{ b.home }}{{ b.pool }}/{{ inventory_hostname }}
+    export BORG_REPO="ssh://{{ b.user }}@{{ b.fqdn }}:{{ b.port | default('22') }}{{ b.home }}/{{ b.pool }}/{{ inventory_hostname }}"
     printf "Archives on {{ b.fqdn }} :\n"
-    /usr/local/bin/borg list {{ b.options }} -v $REPOSITORY
+    /usr/local/bin/borg list {{ b.options }} 
 {% endfor %}
     exit 0
 fi
@@ -51,8 +54,8 @@ fi
 if [ "$1" = "init" ]
   then
 {% for b in borgbackup_servers %}
-    REPOSITORY={% if b.type == 'hetzner' %}ssh://{% endif %}{{ b.user }}@{{ b.fqdn }}:{% if b.type == 'hetzner' %}23/./{% endif %}{{ b.home }}{{ b.pool }}/{{ inventory_hostname }}
-    /usr/local/bin/borg init --encryption={{ borgbackup_encryption_mode }} {{ b.options }} $REPOSITORY
+    export BORG_REPO="ssh://{{ b.user }}@{{ b.fqdn }}:{{ b.port | default('22') }}{{ b.home }}/{{ b.pool }}/{{ inventory_hostname }}"
+    /usr/local/bin/borg init --encryption={{ borgbackup_encryption_mode }} {{ b.options }}
 {% endfor %}
     exit 0
 fi
@@ -70,19 +73,19 @@ if [ "$1" = "backup" ]
 BORGEXIT=()
 {% for b in borgbackup_servers %}
     printf "Backing up to {{ b.fqdn }} :\n"
-    REPOSITORY={% if b.type == 'hetzner' %}ssh://{% endif %}{{ b.user }}@{{ b.fqdn }}:{% if b.type == 'hetzner' %}23/./{% endif %}{{ b.home }}{{ b.pool }}/{{ inventory_hostname }}
 
-    /usr/local/bin/borg create --progress --compression {{ borgbackup_compression }} --stats {{ b.options }} $REPOSITORY::$date {% for dir in borgbackup_include %}{{ dir }} {% endfor %}{% if automysql.stat.isdir is defined and automysql.stat.isdir == True %}/var/lib/automysqlbackup{% endif %} {% for dir in borgbackup_exclude %} --exclude '{{ dir }}'{% endfor %} 
+    export BORG_REPO="ssh://{{ b.user }}@{{ b.fqdn }}:{{ b.port | default('22') }}{{ b.home }}/{{ b.pool }}/{{ inventory_hostname }}"
+    /usr/local/bin/borg create --compression {{ borgbackup_compression }} --stats {{ b.options }} $BORG_REPO::$date {% for dir in borgbackup_include %}{{ dir }} {% endfor %}{% if automysql.stat.isdir is defined and automysql.stat.isdir == True %}/var/lib/automysqlbackup{% endif %} {% for dir in borgbackup_exclude %} --exclude '{{ dir }}'{% endfor %} 
     BORGEXIT+=($?)
 {% if mysql_installed.stat.isdir is defined or borgbackup_do_mysql == True %}
 
-    mysqldump -A | /usr/local/bin/borg create --progress --compression {{ borgbackup_compression }} --stats {{ b.options }} $REPOSITORY::mysqldump-$date - 
+    mysqldump -A | /usr/local/bin/borg create --compression {{ borgbackup_compression }} --stats {{ b.options }} $BORG_REPO::mysqldump-$date - 
     BORGEXIT+=($?)
 
 {% endif %}
 {% if borgbackup_do_plex is defined %}
 
-    sqlite3 "/var/lib/plexmediaserver/Library/Application Support/Plex Media Server/Plug-in Support/Databases/com.plexapp.plugins.library.db" .dump  | /usr/local/bin/borg create --progress --compression {{ borgbackup_compression }} --stats {{ b.options }} $REPOSITORY::plex-dump-$date - 
+    sqlite3 "/var/lib/plexmediaserver/Library/Application Support/Plex Media Server/Plug-in Support/Databases/com.plexapp.plugins.library.db" .dump  | /usr/local/bin/borg create --compression {{ borgbackup_compression }} --stats {{ b.options }} $BORG_REPO::plex-dump-$date - 
     BORGEXIT+=($?)
 
 {% endif %}
@@ -94,13 +97,10 @@ BORGEXIT=()
 
     if [ $EXITCODE -eq 0 ]; then 
         printf "Backup succeeded on $date to {{ b.fqdn }}\n" >> /var/log/borg-backup.log
-{% if borgbackup_statuscake_url is defined %}
-        curl -sfL "{{borgbackup_statuscake_url}}" --output /dev/null
-{% endif %}
-
 {% if not borgbackup_appendonly %}
     # prune old backups if we exited correctly
-    /usr/local/bin/borg prune {{ b.options }} -v $REPOSITORY -H {{ borgbackup_retention.hourly }} -d {{ borgbackup_retention.daily }} -w {{ borgbackup_retention.weekly }} -m {{ borgbackup_retention.monthly }} -y {{ borgbackup_retention.yearly }}
+    export BORG_REPO="ssh://{{ b.user }}@{{ b.fqdn }}:{{ b.port | default('22') }}{{ b.home }}/{{ b.pool }}/{{ inventory_hostname }}"
+    /usr/local/bin/borg prune {{ b.options }} $BORG_REPO -H {{ borgbackup_retention.hourly }} -d {{ borgbackup_retention.daily }} -w {{ borgbackup_retention.weekly }} -m {{ borgbackup_retention.monthly }} -y {{ borgbackup_retention.yearly }}
 {% endif %}
     else
         printf "Backup FAILED on $date to {{ b.fqdn }}\n" >> /var/log/borg-backup.log
