@@ -3,9 +3,6 @@
   tags:
     - install
 
-# or
-# inventory_hostname in groups.borgbackup_servers
-
 - include_tasks: borg-server.yml
   when: inventory_hostname in groups.borgbackup_servers
 
@@ -13,7 +10,5 @@
   when: inventory_hostname not in groups.borgbackup_servers
 
 - import_tasks: management.yml
-  when: inventory_hostname in groups.borgbackup_management
   tags:
     - mgmt
-  # and inventory_hostname not in groups.borgbackup_servers

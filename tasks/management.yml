@@ -6,6 +6,9 @@
     owner: "{{ borgbackup_management_user }}"
     group: "{{ borgbackup_management_user }}"
     mode: 0700
+  delegate_to: "{{ item.shortname }}"
+  loop: "{{ borgbackup_servers }}"
+  when: inventory_hostname in groups.borgbackup_management
   tags:
    - prune
 
