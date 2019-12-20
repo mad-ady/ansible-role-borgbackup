@@ -86,6 +86,7 @@
     mode: "0550"
   tags:
     - script
+    - borg-script
 
 - name: client | create backup-directory if appendonly is set
   file:
