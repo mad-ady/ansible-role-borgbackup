@@ -1,5 +1,7 @@
 ---
 - name: Get latest release of a borgbackup repository
+  delegate_to: localhost
+  run_once: True
   uri:
     url: https://api.github.com/repos/borgbackup/borg/releases/latest
   register: borg_latest
