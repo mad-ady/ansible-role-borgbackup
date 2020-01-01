@@ -28,10 +28,11 @@
       Host {{ item.fqdn }}
         StrictHostKeyChecking no
         IdentityFile {{ borgbackup_ssh_key }}
-        {% if item.port is defined %}
-        Port {{ item.port }}
-        {% endif %}
+        ServerAliveInterval 10
+        ServerAliveCountMax 30
+        Port {{ item.port | default("22") }}
   with_items: "{{ borgbackup_servers }}"
+  tags: config
 
 - name: client | put sshpubkey on the normal backupserver
   authorized_key:
