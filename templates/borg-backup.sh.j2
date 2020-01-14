@@ -80,6 +80,8 @@ BORGEXIT=()
 
     ps aux|grep -q [m]ysqld
     if [ "$?" -eq 0 ]; then
+        # mysterious timeouts, see if this fixes it
+        sleep 5
         mysqldump -A | /usr/local/bin/borg create --compression {{ borgbackup_compression }} --stats {{ b.options }} $BORG_REPO::mysqldump-$date - 
         BORGEXIT+=($?)
     fi
