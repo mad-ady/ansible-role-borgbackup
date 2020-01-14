@@ -95,7 +95,7 @@
   
 - name: client | copy borg keys to ansible host
   fetch:
-    src: "~{{ borgbackup_client_user }}/.config/borg/keys/{{ item.fqdn | replace('.', '_') }}_{{ item.home | replace('/', '_') }}_{{ item.pool }}_{{ inventory_hostname }}"
+    src: "~{{ borgbackup_client_user }}/.config/borg/keys/{{ item.fqdn | replace('.', '_') }}_{{ item.home | replace('/', '_') }}_{{ item.pool }}_{{ inventory_hostname | replace('-', '_') }}"
     dest: /tmp/ansible/borgkeys/
     flat: yes
   with_items: "{{ borgbackup_servers }}"
