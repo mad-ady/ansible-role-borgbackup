@@ -9,8 +9,6 @@
   delegate_to: "{{ item.shortname }}"
   loop: "{{ borgbackup_servers }}"
   when: inventory_hostname in groups.borgbackup_management
-  tags:
-   - prune
 
 # - name: management | put management sshpubkey on the normal backupserver
 #   authorized_key:

@@ -75,16 +75,20 @@ BORGEXIT=()
     printf "Backing up to {{ b.fqdn }} :\n"
 
     export BORG_REPO="{% if b.type == 'ssh' %}ssh://{% endif %}{{ b.user }}@{{ b.fqdn }}:{% if b.type == 'ssh' %}{{ b.port | default('22') }}{% endif %}{{ b.home }}/{{ b.pool }}/{{ inventory_hostname }}"
-    /usr/local/bin/borg create --compression {{ borgbackup_compression }} --stats {{ b.options }} $BORG_REPO::$date {% for dir in borgbackup_include %}{{ dir }} {% endfor %}{% if automysql.stat.isdir is defined and automysql.stat.isdir == True %}/var/lib/automysqlbackup{% endif %} {% for dir in borgbackup_exclude %} --exclude '{{ dir }}'{% endfor %} 
+    /usr/local/bin/borg create --compression {{ borgbackup_compression }} --stats {{ b.options }} $BORG_REPO::$date {% for dir in borgbackup_include %}{{ dir }} {% endfor %}{% if automysql.stat.isdir is defined and automysql.stat.isdir == True %}/var/lib/automysqlbackup{% endif %} {% for dir in borgbackup_exclude %} --exclude '{{ dir }}'{% endfor %} --exclude-if-present .borg_exclude
     BORGEXIT+=($?)
 
     ps aux|grep -q [m]ysqld
     if [ "$?" -eq 0 ]; then
         # mysterious timeouts, see if this fixes it
-        sleep 5
-        mysqldump -A | /usr/local/bin/borg create --compression {{ borgbackup_compression }} --stats {{ b.options }} $BORG_REPO::mysqldump-$date - 
+        mysqldump -A | /usr/local/bin/borg create --compression {{ borgbackup_compression }} --stats {{ b.options }} $BORG_REPO::mysqldump-$date -
         BORGEXIT+=($?)
     fi
+
+{% if borgbackup_do_postgresql is defined %}
+    sudo -u postgres sh -c "cd /tmp; pg_dumpall" | /usr/local/bin/borg create --compression {{ borgbackup_compression }} --stats {{ b.options }} $BORG_REPO::postgresql-$date -
+
+{% endif %}
 {% if borgbackup_do_plex is defined %}
 
     sqlite3 "/var/lib/plexmediaserver/Library/Application Support/Plex Media Server/Plug-in Support/Databases/com.plexapp.plugins.library.db" .dump  | /usr/local/bin/borg create --compression {{ borgbackup_compression }} --stats {{ b.options }} $BORG_REPO::plex-dump-$date - 

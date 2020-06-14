@@ -122,6 +122,11 @@
     state: absent
   delegate_to: localhost
 
+- name: client | check if we have cronjob
+  stat:
+    path: /etc/cron.d/borg-backup
+  register: borg_cron
+
 - name: client | create backup cronjob
   cron:
     cron_file: "borg-backup"
@@ -131,6 +136,7 @@
     hour: "{{ borgbackup_cron_hour }}"
     day: "{{ borgbackup_cron_day }}"
     job: "/usr/local/bin/borg-backup backup >> /var/log/borg.log 2>&1 &"
+  when: borg_cron.stat.exists is undefined
   tags:
     - cron
 
