@@ -126,7 +126,9 @@
   stat:
     path: /etc/cron.d/borg-backup
   register: borg_cron
+  tags: cron
 
+# https://docs.ansible.com/ansible/latest/collections/ansible/builtin/cron_module.html
 - name: client | create backup cronjob
   cron:
     cron_file: "borg-backup"
@@ -136,7 +138,7 @@
     hour: "{{ borgbackup_cron_hour }}"
     day: "{{ borgbackup_cron_day }}"
     job: "/usr/local/bin/borg-backup backup >> /var/log/borg.log 2>&1 &"
-  when: borg_cron.stat.exists is undefined
+  when: not borg_cron.stat.exists
   tags:
     - cron
 
