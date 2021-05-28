@@ -1,6 +1,8 @@
 ---
 borgbackup_required: True
 
+borgbackup_version: latest
+
 borgbackup_packages:
   - curl
 
