@@ -5,6 +5,7 @@ borgbackup_version: latest
 
 borgbackup_packages:
   - curl
+borgbackup_override_borg_installation: False
 
 borgbackup_client_user: root
 borgbackup_ssh_key: "~{{ borgbackup_client_user }}/.ssh/id_borg_rsa"

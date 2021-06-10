@@ -2,13 +2,15 @@
 - name: Set the correct Github API endpoint based on version
   set_fact:
     github_api_endpoint: "{{ 'https://api.github.com/repos/borgbackup/borg/releases/latest' if borgbackup_version == 'latest' else 'https://api.github.com/repos/borgbackup/borg/releases/tags/'+ borgbackup_version}}"
-    
+  when: borgbackup_override_borg_installation == False
+
 - name: Get version {{ borgbackup_version }} of a borgbackup repository
   delegate_to: localhost
   run_once: True
   uri:
     url: "{{github_api_endpoint}}"
   register: borg_latest
+  when: borgbackup_override_borg_installation == False
 
 - name: Download borg backup
   get_url:
@@ -17,6 +19,7 @@
     url: "https://github.com/borgbackup/borg/releases/download/{{ borg_latest.json.tag_name }}/borg-linux64"
     force: yes
   delegate_to: localhost
+  when: borgbackup_override_borg_installation == False
 
 - name: Install borg backup
   copy: 
@@ -25,6 +28,7 @@
     owner: "{{ borgbackup_owner }}"
     group: "{{ borgbackup_group }}"
     mode: "0755"
+  when: borgbackup_override_borg_installation == False
 
 - name: install borg support packages
   apt: 
