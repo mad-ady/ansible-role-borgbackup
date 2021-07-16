@@ -47,3 +47,4 @@ borgbackup_group: root
 borgbackup_shell: "/bin/bash"
 
 borgbackup_prune_script: /usr/local/sbin/borg-prune.sh
+borgbackup_mysql_flags: -A -Y --add-drop-table --add-drop-database --routines --triggers --skip-extended-insert

@@ -88,7 +88,7 @@ BORGEXIT=()
 {% if mysqluser is defined %}
     echo "Doing mysql backup to {{ b.fqdn }}: repo - {{ b.pool }}::mysqldump-$date"
     # --complete-insert --> add column names in inserts
-    mysqldump -A -Y --add-drop-table --add-drop-database --routines --triggers --skip-extended-insert \
+    mysqldump {{borgbackup_mysql_flags}} \
     {% if mysqlpass != '' %}--password='{{mysqlpass}}' {% endif %} \
     {% if mysqluser != '' %}--user='{{mysqluser}}' {% endif %} \
     {% for skip_table in mysqlskip %}
