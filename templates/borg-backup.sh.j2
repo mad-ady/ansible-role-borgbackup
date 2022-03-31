@@ -14,6 +14,7 @@ fi
 # override location since we specify port now
 export BORG_RELOCATED_REPO_ACCESS_IS_OK=yes
 export BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK=yes
+LOGFILE=/var/log/borg-backup.log
 
 # Small helper commands, like listing backups, will help us in the future :)
 
@@ -33,7 +34,7 @@ if [ "$1" = "mount" ]
     if [ -z "$3" ]; then printf "Select the backup to mount\n"; exit 1; fi
     if [ -z "$4" ]; then printf "Select the path to mount the backup on\n"; exit 1; fi
 {% for b in borgbackup_servers %}
-    export BORG_REPO="ssh://{{ b.user }}@{{ b.fqdn }}:{{ b.port | default('22') }}{{ b.home }}/{{ b.pool }}"
+    export BORG_REPO="ssh://{{ b.user }}@$2:{{ b.port | default('22') }}{{ b.home }}/{{ b.pool }}"
     /usr/local/bin/borg mount {{ b.options }} $BORG_REPO::$3 $4
     if [ "$?" = "0" ]; then printf "Backup mounted on $4, do not forget to unmount!\n"; fi
     exit 0
@@ -62,12 +63,15 @@ fi
 if [ "$1" = "backup" ]
   then
     date=`date +%Y%m%d-%H%M`
-    logsize=$(stat -c%s /var/log/borg-backup.log)
+    logsize=0
+    if [ -f "$LOGFILE" ]; then
+        logsize=$(stat -c%s "$LOGFILE")
+    fi
     if [ "$logsize" -gt 1000000 ]; then
-        echo "$date: Truncating backup log..." > /var/log/borg-backup.log
+        echo "$date: Truncating backup log..." > "$LOGFILE" 
     fi
 
-    echo "===== Running backup at $date =====" >> /var/log/borg-backup.log
+    echo "===== Running backup at $date =====" >> "$LOGFILE"
 
     # Running some commands pre-backup
 {% for precommand in borgbackup_pre_commands %}
@@ -114,7 +118,7 @@ BORGEXIT=()
     done
 
     if [ $EXITCODE -eq 0 ]; then 
-        printf "Backup succeeded on $date to {{ b.fqdn }}\n" >> /var/log/borg-backup.log
+        printf "Backup succeeded on $date to {{ b.fqdn }}\n" >> "$LOGFILE"
 {% if not borgbackup_appendonly %}
     # prune old backups if we exited correctly
     {% for dir in borgbackup_include %}
@@ -129,7 +133,7 @@ BORGEXIT=()
     {% endif %}
 {% endif %}
     else
-        printf "Backup FAILED on $date to {{ b.fqdn }}\n" >> /var/log/borg-backup.log
+        printf "Backup FAILED on $date to {{ b.fqdn }}\n" >> "$LOGFILE"
     fi
 
 {% endfor %}
